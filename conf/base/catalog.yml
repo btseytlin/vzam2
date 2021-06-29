@@ -1,0 +1,38 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://kedro.readthedocs.io/en/stable/05_data/01_data_catalog.html
+
+train_videos:
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/01_raw
+  dir_name: videos
+
+video_clips:
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/03_primary
+  dir_name: clips
+
+video_features:
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/04_feature
+  dir_name: video_features
+
+video_keyframes:
+  type: kedro.extras.datasets.json.json_dataset.JSONDataSet
+  filepath: data/05_model_input/video_keyframes.json
+
+clip_keyframes:
+  type: kedro.extras.datasets.json.json_dataset.JSONDataSet
+  filepath: data/05_model_input/clip_keyframes.json
+
+clip_features:
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/04_feature
+  dir_name: clip_features
+
+indexer:
+  type: vzam.extras.datasets.indexer.IndexerDataset
+  filepath: data/06_models/indexer
+  index_fname: index.faiss
+  args_fname: args.json
