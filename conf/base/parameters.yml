@@ -1,6 +1,10 @@
 feature_extractor: 'MobileNetV3'
 device: 0
 
+clip_length_seconds: 30
+clip_fps: 5
+clip_width: 256
+
 # Video preprocessing params
 resize_size: 256
 fps: 5

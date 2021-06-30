@@ -31,9 +31,7 @@ from typing import Dict
 
 from kedro.pipeline import Pipeline
 
-from .pipelines import get_video_features
-from .pipelines import get_video_keyframes
-from .pipelines import build_index
+from .pipelines import (get_video_features, get_video_keyframes, build_index, make_clips)
 
 
 def register_pipelines() -> Dict[str, Pipeline]:
@@ -46,4 +44,5 @@ def register_pipelines() -> Dict[str, Pipeline]:
             "get_video_features": get_video_features.create_pipeline(),
             "get_video_keyframes": get_video_keyframes.create_pipeline(),
             "build_index": build_index.create_pipeline(),
+            "make_clips": make_clips.create_pipeline(),
             }
