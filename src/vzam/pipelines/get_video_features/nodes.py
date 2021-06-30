@@ -17,6 +17,16 @@ def l_normalize(x, p=2):
     return x_normalized
 
 
+def get_frame_preprocessor(parameters):
+    return transforms.Compose(
+        [
+            transforms.Resize(parameters['resize_size']),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225]),
+        ]
+    )
+
 def extract_video_features(fpath, frame_preprocessor, feature_extractor, device, fps=5, batch_size=32):
     def process_batch(tensor_list):
         batch = torch.cat(tensor_list)
@@ -57,14 +67,7 @@ def get_video_features(train_videos, parameters):
     feature_extractor = get_feature_extractor(parameters['feature_extractor'])
     feature_extractor = feature_extractor.to(parameters['device'])
 
-    preprocess = transforms.Compose(
-        [
-            transforms.Resize(parameters['resize_size']),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 std=[0.229, 0.224, 0.225]),
-        ]
-    )
+    frame_preprocess = get_frame_preprocessor(parameters)
 
     out_dataset_path = context.catalog.datasets.video_features._dir_path
     if not os.path.exists(out_dataset_path):
@@ -80,7 +83,7 @@ def get_video_features(train_videos, parameters):
             continue
 
         times, video_features = extract_video_features(fpath,
-                                                frame_preprocessor=preprocess,
+                                                frame_preprocessor=frame_preprocess,
                                                 feature_extractor=feature_extractor,
                                                 fps=parameters['fps'],
                                                 device=parameters['device'])

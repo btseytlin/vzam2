@@ -51,6 +51,9 @@ class IndexerDataset(AbstractDataSet):
         return indexer
 
     def _save(self, indexer) -> None:
+        if not os.path.exists(self._filepath):
+            os.makedirs(self._filepath)
+
         faiss.write_index(indexer.index, self._index_path)
         with open(self._args_path, 'w') as f:
             json.dump({

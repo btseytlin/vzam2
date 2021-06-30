@@ -8,7 +8,7 @@ def create_pipeline(**kwargs):
         [
             node(
                 build_index,
-                ["video_keyframes", "parameters"],
+                ["video_keyframes", "video_features", "parameters"],
                 "indexer"
             ),
         ]

@@ -12,7 +12,7 @@ def get_peaks(series):
     algo = rpt.KernelCPD(kernel="rbf", min_size=10).fit(series)
     result = algo.predict(pen=2)[:-1]
     if len(result) < 5:
-        result = range(0, len(series), len(series)//5)
+        result = np.array(range(0, len(series), len(series)//5))
     else:
         new_result = []
         for i in range(1, len(result)):
@@ -29,6 +29,7 @@ def get_video_keyframes(video_features, parameters):
     keyframes = {}
     for dir_entry in video_features:
         path = dir_entry.path
+        name = dir_entry.name
 
         df = pd.read_csv(path)
         df.index = df.time
@@ -39,7 +40,7 @@ def get_video_keyframes(video_features, parameters):
         series = reduce_to_series(features)
         keyframe_indices = get_peaks(series)
         keyframe_times = times[keyframe_indices]
-        keyframes[path] = {'indices': keyframe_indices.astype(int).tolist(),
+        keyframes[name] = {'indices': keyframe_indices.astype(int).tolist(),
                            'times': keyframe_times.round(3).astype(float).tolist()}
 
     return keyframes

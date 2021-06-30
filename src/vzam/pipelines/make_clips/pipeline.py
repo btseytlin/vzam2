@@ -9,7 +9,7 @@ def create_pipeline(**kwargs):
             node(
                 cut_videos_into_clips,
                 ["train_videos", "parameters"],
-                None
+                None # video_clips
             ),
         ]
     )

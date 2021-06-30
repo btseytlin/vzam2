@@ -16,3 +16,7 @@ indexer_params:
   M: 16
   nbits: 8
   hnsw_m: 32
+
+# Evaluation
+n_splits: 3
+threshold: 5
