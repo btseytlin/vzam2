@@ -9,14 +9,28 @@ clip_width: 256
 resize_size: 256
 fps: 5
 
+# 2nd order features
+batch_size: 1
+data_loader_workers: 0
+
+order2_extractor:
+  pos_margin: 0.2
+  neg_margin: 0.6
+
+  gpus: -1
+  max_steps: 30
+  lr: 0.001
+  weight_decay: 0.00001
+
+
 # Faiss
 indexer_params:
   nlist: 100
-  d: 1280
+  d: 128
   M: 16
   nbits: 8
   hnsw_m: 32
 
 # Evaluation
 n_splits: 3
-threshold: 5
+threshold: 0.65

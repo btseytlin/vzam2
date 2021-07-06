@@ -13,7 +13,7 @@ def create_pipeline(**kwargs):
             ),
             node(
                 run_cv,
-                ["cv_splits", "video_features", "video_keyframes", "clip_features", "clip_keyframes", "parameters"],
+                ["cv_splits", "video_features", "clip_features", "parameters"],
                 "evaluation_metrics"
             ),
         ]

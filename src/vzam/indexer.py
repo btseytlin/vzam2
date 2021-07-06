@@ -11,8 +11,10 @@ class Indexer:
         self.hnsw_m = hnsw_m
 
         self.quantizer = quantizer or faiss.IndexHNSWFlat(self.d, self.hnsw_m)
-        self.index = index or faiss.IndexIVFPQ(self.quantizer, self.d, self.nlist, self.M, self.nbits)
+        # self.index = index or faiss.IndexIVFPQ(self.quantizer, self.d, self.nlist, self.M, self.nbits)
+        self.index = index or faiss.IndexFlatIP(self.d)
         self.metadata = metadata or {}
+
 
     @property
     def is_trained(self):
@@ -25,11 +27,13 @@ class Indexer:
             self.metadata[index_id] = m
 
     def train(self, vectors, meta=None):
+        faiss.normalize_L2(vectors)
         self.index.train(vectors)
         if meta:
             self.add_meta(meta)
 
     def add(self, vectors, meta):
+        faiss.normalize_L2(vectors)
         self.index.add(vectors)
         self.add_meta(meta)
 
@@ -39,39 +43,19 @@ class Indexer:
         match_indices = [[j for j in indices[i] if j != -1] for i in range(len(indices))]
         return indices, distances, match_indices
 
-    def query(self, vectors, times):
-        indices, distances, match_indices = self.get_match_indices(vectors)
+    def query(self, vectors):
+        faiss.normalize_L2(vectors)
+        distances, indices = self.index.search(vectors, k=self.nlist)
+
+
 
         flat_idx = indices.flatten()
-        flat_idx = flat_idx[flat_idx != -1]
-        match_candidate_labels = list(set([self.metadata[m]['label'] for m in flat_idx]))
+        match_mask = flat_idx != -1
+        flat_idx = flat_idx[match_mask]
+        flat_distances = distances.flatten()
+        flat_distances = flat_distances[match_mask]
 
-        match_time_pairs = {}
-        for label in match_candidate_labels:
-            match_time_pairs[label] = []
-            # get match pairs for label
-            for i, matches in enumerate(indices):
-                for match_peak_idx in matches:
-                    if match_peak_idx == -1:
-                        continue
-                    match_time, match_label = self.metadata[match_peak_idx]['time'], self.metadata[match_peak_idx]['label']
-                    if match_label != label:
-                        continue
-                    match_time_pairs[label].append((times[i], match_time))
-            match_time_pairs[label] = np.array(match_time_pairs[label])
-
-        candidate_scores = {}
-        for candidate in match_time_pairs.keys():
-            time_pairs = match_time_pairs[candidate]
-            query_times = time_pairs[:, 0]
-            match_times = time_pairs[:, 1]
-            hist, bin_edges = np.histogram(query_times - match_times, bins=10)
-            candidate_scores[candidate] = max(hist)
-
-            # plt.title(f'{candidate} match scatterplot')
-            # plot_match_scatterplot(query_times, match_times)
-            # plt.title(f'{candidate} match hist')
-            # plot_match_histogram(query_times, match_times)
+        candidate_scores = {self.metadata[m]: d for m, d in zip(flat_idx, flat_distances)}
 
         return candidate_scores
 
