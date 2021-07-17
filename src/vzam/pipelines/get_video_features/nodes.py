@@ -70,7 +70,7 @@ def get_video_features(train_videos, parameters):
     for video_file in tqdm(train_videos):
         fpath = video_file.path
         name = video_file.name
-        basename = name.split(".")[0]
+        basename = '.'.join(name.split(".")[:-1])
         out_fpath = os.path.join(out_dataset_path, basename + '.pkl')
 
         if os.path.exists(out_fpath):

@@ -10,3 +10,6 @@ def get_feature_extractor(extractor_name):
         'MobileNetV3': MobileNetv3,
     }
     return extractors[extractor_name]()
+
+def fname(txt):
+    return '.'.join(txt.split('.')[:-1])

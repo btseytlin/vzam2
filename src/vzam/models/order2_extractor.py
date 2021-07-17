@@ -97,7 +97,10 @@ class Order2Extractor(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         x, y = batch
-        x = torch.unsqueeze(x, 1)
-        embeddings = self(x)
+        embeddings = []
+        for img in x:
+            img = img.unsqueeze(0).unsqueeze(1)
+            embeddings.append(self(img))
+        embeddings = torch.stack(embeddings).squeeze(1)
         loss = self.loss(embeddings, y)
         return loss

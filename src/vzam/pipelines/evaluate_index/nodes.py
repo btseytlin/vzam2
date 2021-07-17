@@ -4,14 +4,16 @@ from tqdm.auto import tqdm
 from sklearn.model_selection import KFold
 from sklearn.metrics import classification_report
 
-from ..build_index.nodes import build_index
+from ..build_index.nodes import build_index, train_indexer
 from ..train_order2_extractor.nodes import train_order2_extractor
-from ..get_video_order2_features.nodes import get_video_order2_features
+from ..get_video_order2_features.nodes import  extract_order2_features
+from ...indexer import Indexer
+from ...utils import fname
 
 
 def obtain_cv_splits(video_features, clip_features, parameters):
-    video_names = np.array([e.name for e in video_features])
-    clip_names = np.array([e.name for e in clip_features])
+    video_names = np.array([fname(e.name) for e in video_features])
+    clip_names = np.array([fname(e.name)  for e in clip_features])
 
     cv = KFold(n_splits=parameters['n_splits'])
 
@@ -41,23 +43,35 @@ def run_cv(cv_splits, video_features, clip_features, parameters):
         clip_labels = split['clip_labels']
         clip_names = split['clip_names']
 
-        train_video_features = [entry for entry in video_features if entry.name in train_videos]
-        train_clip_features = [entry for entry in clip_features if entry.name.split('__')[1] in train_videos]
+        train_video_features = [e for e in video_features if fname(e.name) in train_videos]
+        train_clip_features = [e for e in clip_features if fname(e.name).split('__')[1] in train_videos]
 
-        order2_extractor = train_order2_extractor(train_video_features, train_clip_features, parameters)
+        order2_extractor = train_order2_extractor(train_video_features, parameters)
 
-        train_video_order2_features = get_video_order2_features(train_video_features, order2_extractor, parameters)
-        train_clip_order2_features = get_video_order2_features(train_clip_features, order2_extractor, parameters)
+        train_video_source_names, train_video_clip_times, train_video_order2_features = extract_order2_features(train_video_features, order2_extractor, parameters)
+        train_clip_source_names, train_clip_clip_times, train_clip_order2_features = extract_order2_features(train_clip_features, order2_extractor, parameters)
 
-        indexer = build_index(train_video_order2_features, parameters)
+        indexer = train_indexer(Indexer(**parameters['indexer_params']),
+                                train_video_order2_features,
+                                train_video_source_names,
+                                train_video_clip_times)
 
+        group_clip_vectors = {name: [] for name in train_clip_source_names}
+        for name, feature_vector, clip_time in zip(train_clip_source_names, train_clip_order2_features, train_clip_clip_times):
+            group_clip_vectors[name].append((feature_vector, clip_time))
+
+        for k in group_clip_vectors:
+            group_clip_vectors[k] = sorted(group_clip_vectors[k], key=lambda x: x[1][0])
         true_labels = []
         pred_labels = []
         pred_scores = []
-        for clip_name, clip_order2_feature_vector in tqdm(train_clip_order2_features.items(), total=len(train_clip_order2_features)):
 
-            batch = np.expand_dims(np.array(clip_order2_feature_vector).astype(np.float32), axis=0)
-            scores = indexer.query(batch)
+        for clip_name in tqdm(group_clip_vectors):
+            clip_feature_vectors = [t[0] for t in group_clip_vectors[clip_name]]
+            clip_times = [t[1] for t in group_clip_vectors[clip_name]]
+            vectors_batch = np.stack(clip_feature_vectors).astype(np.float32)
+            scores = indexer.query(vectors_batch, clip_times)
+
             scores = {k: round(float(v), 4) for k, v in scores.items()}
             pred_scores.append(scores)
 

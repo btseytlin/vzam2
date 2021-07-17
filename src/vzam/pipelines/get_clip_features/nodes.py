@@ -22,10 +22,12 @@ def get_clip_features(video_clips, parameters):
         os.makedirs(out_dataset_path)
 
     for video_dir in tqdm(video_clips):
+        source_video_name = video_dir.name
         for video_file in os.scandir(video_dir.path):
             fpath = video_file.path
             name = video_file.name
-            out_fpath = os.path.join(out_dataset_path, name + '.csv')
+            basename = '.'.join(name.split(".")[:-1])
+            out_fpath = os.path.join(out_dataset_path, basename + '.pkl')
 
             if os.path.exists(out_fpath):
                 logging.warning('%s features already exist, skipping', out_fpath)

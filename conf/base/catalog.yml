@@ -10,7 +10,7 @@ train_videos:
 
 video_clips:
   type: vzam.extras.datasets.file_folder.FileFolderDataSet
-  filepath: data/03_primary
+  filepath: data/02_intermediate
   dir_name: clips
 
 video_features:

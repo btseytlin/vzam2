@@ -2,10 +2,12 @@ feature_extractor: 'MobileNetV3'
 device: 0
 
 video_clip_size: 300
+minimal_clip_size: 50
 
 clip_length_seconds: 30
 clip_fps: 3
 clip_width: 256
+clips_per_video: 3
 
 # Video preprocessing params
 resize_size: 256
@@ -16,11 +18,11 @@ batch_size: 24
 data_loader_workers: 2
 
 order2_extractor:
-  pos_margin: 0.2
+  pos_margin: 0.1
   neg_margin: 0.6
 
   gpus: -1
-  max_steps: 100
+  max_steps: 200
   lr: 0.001
   weight_decay: 0.00001
 
