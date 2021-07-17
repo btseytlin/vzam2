@@ -6,6 +6,8 @@ from torch import nn
 import timm
 import pytorch_lightning as pl
 import torch.nn.functional as F
+from pytorch_metric_learning import losses
+from vzam.utils import l_normalize
 
 
 def dfs_freeze(model, unfreeze=False):
@@ -24,6 +26,7 @@ class Order2Extractor(pl.LightningModule):
         self.save_hyperparameters(hparams)
         self.only_train_layers = only_train_layers
 
+        self.loss = losses.ContrastiveLoss(pos_margin=hparams.pos_margin, neg_margin=hparams.neg_margin)
         self.trunk = nn.Sequential(
             nn.Conv2d(1, 3, kernel_size=3),
             nn.BatchNorm2d(3),
@@ -73,7 +76,7 @@ class Order2Extractor(pl.LightningModule):
                 dfs_freeze(layer, unfreeze=True)
 
     def forward(self, x):
-        return self.trunk(x)
+        return l_normalize(self.trunk(x))
 
     def predict_proba(self, x):
         probabilities = nn.functional.softmax(self.forward(x), dim=1)
@@ -93,28 +96,8 @@ class Order2Extractor(pl.LightningModule):
         )
 
     def training_step(self, batch, batch_idx):
-        running_loss = 0
-        for video_x, video_y in zip(batch['video'][0], batch['video'][1]):
-            for clip_x, clip_y in zip(batch['clip'][0], batch['clip'][1]):
-
-                video_features = self(video_x.unsqueeze(0).float())
-                clip_features = self(clip_x.unsqueeze(0).float())
-
-                same_label = video_x == clip_y
-
-                dist = torch.cdist(video_features, clip_features, p=2.0)
-
-                if same_label:
-                    running_loss += torch.clamp(dist - self.hparams.pos_margin, min=0)
-                else:
-                    running_loss += torch.clamp(self.hparams.neg_margin - dist, min=0)
-        return running_loss
-
-    @torch.no_grad()
-    def validation_step(self, batch, batch_idx):
         x, y = batch
-        y_hat = self(x)
-        loss = F.cross_entropy(y_hat, y)
-        acc = accuracy(y_hat, y)
-        self.log("val_acc", acc, prog_bar=True, logger=True),
-        self.log("val_loss", loss, prog_bar=True, logger=True)
+        x = torch.unsqueeze(x, 1)
+        embeddings = self(x)
+        loss = self.loss(embeddings, y)
+        return loss

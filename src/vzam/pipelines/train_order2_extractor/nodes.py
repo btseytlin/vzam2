@@ -2,68 +2,74 @@
 from argparse import Namespace
 
 import torch
-import pandas as pd
+import pickle
 import numpy as np
 from pytorch_lightning import Trainer
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms import transforms
-
+from sklearn.preprocessing import LabelEncoder
 from vzam.models.order2_extractor import Order2Extractor
 
 
-class CustomDataset(Dataset):
-    def __init__(self, dict, transform=None, *args, **kwargs):
+class VideoClipsDataset(Dataset):
+    def __init__(self, clip_features, source_video_names, clip_times, transform=None, *args, **kwargs):
         super().__init__()
-        self.data = np.array(list(dict.values()))
-        self.target = np.array(list(dict.keys()))
+        self.clip_features = np.array(clip_features)
+        self.source_video_names = np.array(source_video_names)
+        self.clip_times = np.array(clip_times)
         self.transform = transform
 
+        self.y_label_encoder = LabelEncoder()
+        self.y = self.y_label_encoder.fit_transform(source_video_names)
+
     def __getitem__(self, index):
-        x = self.transform(self.data[index])
-        y = self.target[index]
+        x = self.transform(self.clip_features[index])
+        y = self.y[index]
 
         return x, y
 
     def __len__(self):
-        return len(self.data)
+        return len(self.clip_features)
 
 
-def get_dataset(features_entries, is_clips=False):
-    preprocessor = transforms.Compose(
-        [
-            transforms.ToTensor(),
-        ]
-    )
+def extract_video_clip_features(video_features_path, video_clip_size):
+    video_clip_features, video_clip_times = [], []
 
-    out_dict = {}
+    times, features = pickle.load(open(video_features_path, 'rb'))
+    clip_size = video_clip_size
+    for i in range(0, len(features) - clip_size, clip_size):
+        clip_times = times[i:i + clip_size]
+        clip_times = (clip_times.min(), clip_times.max())
+        clip_features = features[i:i + clip_size]
+
+        video_clip_features.append(clip_features)
+        video_clip_times.append(clip_times)
+    return video_clip_features, video_clip_times
+
+
+def get_dataset(features_entries, video_clip_size):
+    preprocessor = transforms.Compose([])
+
+    all_clip_features, all_source_video_names, all_clip_times = [], [], []
     for dir_entry in features_entries:
         path = dir_entry.path
         name = dir_entry.name
+        basename = name.split(".")[0]
 
-        df = pd.read_csv(path)
-        df.index = df.time
-        df = df.drop(columns=['time'])
-        features = df.values
+        video_clip_features, video_clip_times = extract_video_clip_features(path, video_clip_size)
+        all_clip_features += video_clip_features
+        all_clip_times += video_clip_times
+        all_source_video_names += [basename] * len(video_clip_features)
 
-        if is_clips:
-            name = name.split('__')[1]
-        out_dict[name] = features
-
-    return CustomDataset(out_dict, transform=preprocessor)
+    all_clip_features = torch.stack(all_clip_features)
+    return VideoClipsDataset(all_clip_features, all_source_video_names, all_clip_times, transform=preprocessor)
 
 
-def train_order2_extractor(video_features, clip_features, parameters):
-    video_dataset = get_dataset(video_features)
-    clip_dataset = get_dataset(clip_features, is_clips=True)
+def train_order2_extractor(video_features, parameters):
+    video_clips_dataset = get_dataset(video_features, video_clip_size=parameters['video_clip_size'])
 
-    video_loader = DataLoader(video_dataset,
-                              batch_size=parameters['batch_size'],
-                              num_workers=parameters['data_loader_workers'],
-                              shuffle=True,
-                              pin_memory=True)
-
-    clip_loader = DataLoader(clip_dataset,
+    video_clips_loader = DataLoader(video_clips_dataset,
                               batch_size=parameters['batch_size'],
                               num_workers=parameters['data_loader_workers'],
                               shuffle=True,
@@ -81,5 +87,5 @@ def train_order2_extractor(video_features, clip_features, parameters):
     # Model
     model = Order2Extractor(hparams=hparams)
     # Training
-    trainer.fit(model, dict(video=video_loader, clip=clip_loader))
+    trainer.fit(model, video_clips_loader)
     return model

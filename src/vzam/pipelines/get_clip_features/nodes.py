@@ -1,6 +1,6 @@
 import os
 import logging
-import pandas as pd
+import pickle
 import numpy as np
 from kedro.framework.session import get_current_session
 from tqdm.auto import tqdm
@@ -37,7 +37,5 @@ def get_clip_features(video_clips, parameters):
                                                            fps=parameters['fps'],
                                                            device=parameters['device'])
 
-            features_df = pd.DataFrame(np.array(video_features), index=times)
-            features_df.index.name = 'time'
-
-            features_df.to_csv(out_fpath)
+            with open(out_fpath, 'wb') as f:
+                pickle.dump((times, video_features), f)

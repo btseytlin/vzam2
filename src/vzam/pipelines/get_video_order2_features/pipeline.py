@@ -9,7 +9,7 @@ def create_pipeline(**kwargs):
             node(
                 get_video_order2_features,
                 ["video_features", "order2_extractor", "parameters"],
-                "video_order2_features"
+                None, #"video_order2_features"
             ),
         ]
     )

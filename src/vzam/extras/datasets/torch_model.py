@@ -7,6 +7,10 @@ modo:
   filepath: modo.pt
   model: ExampleModel
 """
+import json
+import os
+from argparse import Namespace
+
 from vzam.models.order2_extractor import Order2Extractor
 
 models = {
@@ -36,6 +40,7 @@ class TorchLocalModel(AbstractDataSet):
         save_args: Dict[str, Any] = None,
     ) -> None:
         self._filepath = filepath
+        self._hparams_path = os.path.join(os.path.dirname(self._filepath), os.path.basename(self._filepath) + '_hparams.json')
         self._model = model
         if model in models:
             self._Model = models[model]
@@ -50,12 +55,16 @@ class TorchLocalModel(AbstractDataSet):
             if save_args is not None else default_save_args
 
     def _load(self):
+        with open(self._hparams_path, 'r') as f:
+            hparams = Namespace(**json.load(f))
         state_dict = torch.load(self._filepath)
-        model = self._Model(**self._load_args)
+        model = self._Model(hparams=hparams, **self._load_args)
         model.load_state_dict(state_dict)
         return model
 
     def _save(self, model) -> None:
+        with open(self._hparams_path, 'w') as f:
+            json.dump(model.hparams, f)
         torch.save(model.state_dict(), self._filepath, **self._save_args)
 
     def _exists(self) -> bool:

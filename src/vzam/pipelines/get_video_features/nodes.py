@@ -2,19 +2,13 @@ import os
 import logging
 import torch
 import numpy as np
-import pandas as pd
+import pickle
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from torchvision import transforms
-from vzam.utils import get_feature_extractor
+from vzam.utils import get_feature_extractor, l_normalize
 from PIL import Image
 from tqdm.auto import tqdm
 from kedro.framework.session import get_current_session
-
-
-def l_normalize(x, p=2):
-    norm = x.norm(p=p, dim=1, keepdim=True)
-    x_normalized = x.div(norm.expand_as(x))
-    return x_normalized
 
 
 def get_frame_preprocessor(parameters):
@@ -76,7 +70,8 @@ def get_video_features(train_videos, parameters):
     for video_file in tqdm(train_videos):
         fpath = video_file.path
         name = video_file.name
-        out_fpath = os.path.join(out_dataset_path, name + '.csv')
+        basename = name.split(".")[0]
+        out_fpath = os.path.join(out_dataset_path, basename + '.pkl')
 
         if os.path.exists(out_fpath):
             logging.warning('%s features already exist, skipping', out_fpath)
@@ -88,10 +83,8 @@ def get_video_features(train_videos, parameters):
                                                 fps=parameters['fps'],
                                                 device=parameters['device'])
 
-        features_df = pd.DataFrame(np.array(video_features), index=times)
-        features_df.index.name = 'time'
-
-        features_df.to_csv(out_fpath)
+        with open(out_fpath, 'wb') as f:
+            pickle.dump((times, video_features), f)
 
 
 

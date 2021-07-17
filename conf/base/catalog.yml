@@ -24,12 +24,14 @@ clip_features:
   dir_name: clip_features
 
 video_order2_features:
-  type: kedro.extras.datasets.json.json_dataset.JSONDataSet
-  filepath: data/05_model_input/video_order2_features.json
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/05_model_input
+  dir_name: video_order2_features
 
 clip_order2_features:
-  type: kedro.extras.datasets.json.json_dataset.JSONDataSet
-  filepath: data/05_model_input/clip_order2_features.json
+  type: vzam.extras.datasets.file_folder.FileFolderDataSet
+  filepath: data/05_model_input
+  dir_name: clip_order2_features
 
 order2_extractor:
   type: vzam.extras.datasets.torch_model.TorchLocalModel

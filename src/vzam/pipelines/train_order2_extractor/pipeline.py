@@ -8,7 +8,7 @@ def create_pipeline(**kwargs):
         [
             node(
                 train_order2_extractor,
-                ["video_features", "clip_features", "parameters"],
+                ["video_features", "parameters"],
                 "order2_extractor",
             ),
         ]
